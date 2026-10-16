@@ -351,9 +351,18 @@
       gap: 12px;
     }
 
-    @media (min-width: 580px) {
+    @media (min-width: 580px) and (max-width: 767px) {
       .config-grid {
-        grid-template-columns: 1.3fr 1fr;
+        grid-template-columns: 1fr 1fr;
+      }
+      .config-grid .form-group:first-child {
+        grid-column: span 2;
+      }
+    }
+
+    @media (min-width: 768px) {
+      .config-grid {
+        grid-template-columns: 1.2fr 1fr 1fr;
       }
     }
 
@@ -431,8 +440,49 @@
     .entry-header-right {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
       flex-shrink: 0;
+    }
+
+    .reorder-btns-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 1px;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+    }
+
+    .btn-reorder {
+      width: 25px;
+      height: 25px;
+      border-radius: 5px;
+      border: none;
+      background: transparent;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      padding: 0;
+    }
+
+    .btn-reorder:hover:not(:disabled) {
+      background: #ffffff;
+      color: var(--primary);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-reorder:active:not(:disabled) {
+      transform: scale(0.92);
+    }
+
+    .btn-reorder:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+      pointer-events: none;
     }
 
     .entry-live-amt {
@@ -466,6 +516,18 @@
 
     .btn-remove:active {
       transform: scale(0.97);
+    }
+
+    @media (max-width: 420px) {
+      .entry-header-desc {
+        max-width: 90px;
+      }
+      .entry-header-right {
+        gap: 5px;
+      }
+      .btn-remove .btn-remove-text {
+        display: none;
+      }
     }
 
     /* Entry Inputs Layout */
@@ -1319,6 +1381,17 @@
           </div>
           <span class="field-hint">Records are saved separately for each month.</span>
         </div>
+
+        <div class="form-group">
+          <label for="receivedAmount" class="form-label">
+            Payment Received <span class="label-optional">(Optional)</span>
+          </label>
+          <div class="amount-input-container">
+            <span class="currency-symbol">₹</span>
+            <input type="number" id="receivedAmount" placeholder="e.g. 500 (leave blank if none)" min="0" step="any" inputmode="decimal">
+          </div>
+          <span class="field-hint">Deducts from total &amp; shows balance to pay.</span>
+        </div>
       </div>
     </section>
 
@@ -1515,7 +1588,7 @@
   <aside class="sticky-total-bar" aria-label="Settlement Total">
     <div class="sticky-inner">
       <div class="total-info-group">
-        <div class="total-caption">TOTAL TO SETTLE</div>
+        <div class="total-caption" id="totalCaption">TOTAL TO SETTLE</div>
         <div class="total-amount-display" id="totalDisplay">₹0</div>
         <div class="total-meta-sub" id="countDisplay">0 expenses</div>
       </div>
@@ -1676,7 +1749,17 @@
       lines.push('━━━━━━━━━━━━━━');
       lines.push('');
       lines.push(`📌 Total Expenses: ${valid.length}`);
-      lines.push(`💰 *TOTAL AMOUNT: ${formatINR(total)}*`);
+
+      const receivedVal = parseFloat($('receivedAmount')?.value) || 0;
+      if (receivedVal > 0) {
+        const balance = Math.max(0, total - receivedVal);
+        lines.push(`💰 Total Amount: ${formatINR(total)}`);
+        lines.push(`💵 Payment Received: ${formatINR(receivedVal)}`);
+        lines.push(`⚖️ *BALANCE TO PAY: ${formatINR(balance)}*`);
+      } else {
+        lines.push(`💰 *TOTAL AMOUNT: ${formatINR(total)}*`);
+      }
+
       lines.push('');
       lines.push('Please find the breakdown above and settle at your earliest convenience. Let me know once done! Thanks a lot 😊');
 
@@ -1705,16 +1788,31 @@
       const total = valid.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
       const validCount = valid.length;
       const totalCount = entries.length;
+      const receivedVal = parseFloat($('receivedAmount')?.value) || 0;
 
-      const formattedTotal = formatINR(total);
-      $('totalDisplay').textContent = formattedTotal;
+      if (receivedVal > 0) {
+        const balance = Math.max(0, total - receivedVal);
+        if ($('totalCaption')) $('totalCaption').textContent = 'BALANCE TO PAY';
+        $('totalDisplay').textContent = formatINR(balance);
 
-      let metaText = `${validCount} expense${validCount === 1 ? '' : 's'}`;
-      if (totalCount > validCount) {
-        const emptyCount = totalCount - validCount;
-        metaText += ` (${emptyCount} empty excluded)`;
+        let metaText = `Total: ${formatINR(total)} – Paid: ${formatINR(receivedVal)}`;
+        if (totalCount > validCount) {
+          const emptyCount = totalCount - validCount;
+          metaText += ` (${emptyCount} empty)`;
+        }
+        $('countDisplay').textContent = metaText;
+      } else {
+        if ($('totalCaption')) $('totalCaption').textContent = 'TOTAL TO SETTLE';
+        $('totalDisplay').textContent = formatINR(total);
+
+        let metaText = `${validCount} expense${validCount === 1 ? '' : 's'}`;
+        if (totalCount > validCount) {
+          const emptyCount = totalCount - validCount;
+          metaText += ` (${emptyCount} empty excluded)`;
+        }
+        $('countDisplay').textContent = metaText;
       }
-      $('countDisplay').textContent = metaText;
+
       $('countBadge').textContent = `${validCount} item${validCount === 1 ? '' : 's'}`;
     }
 
@@ -1746,13 +1844,25 @@
                 <span style="font-weight:600;color:#475569;font-size:12.5px;" class="entry-header-desc">${esc(quickDesc)}</span>
               </div>
               <div class="entry-header-right">
+                <div class="reorder-btns-group" role="group" aria-label="Reorder expense #${i + 1}">
+                  <button type="button" class="btn-reorder btn-move-up" data-move-up="${i}" title="Move up" aria-label="Move expense #${i + 1} up" ${i === 0 ? 'disabled' : ''}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                  </button>
+                  <button type="button" class="btn-reorder btn-move-down" data-move-down="${i}" title="Move down" aria-label="Move expense #${i + 1} down" ${i === entries.length - 1 ? 'disabled' : ''}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                </div>
                 <span class="entry-live-amt">${quickAmt}</span>
-                <button type="button" class="btn-remove" data-remove="${i}" title="Remove this expense" aria-label="Remove expense ${i + 1}" style="gap:4px;display:inline-flex;align-items:center;">
+                <button type="button" class="btn-remove" data-remove="${i}" title="Remove this expense" aria-label="Remove expense #${i + 1}" style="gap:4px;display:inline-flex;align-items:center;">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="3 6 5 6 21 6"></polyline>
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                   </svg>
-                  Remove
+                  <span class="btn-remove-text">Remove</span>
                 </button>
               </div>
             </div>
@@ -1841,6 +1951,7 @@
       try {
         const payload = {
           friend: $('friend').value || '',
+          received: $('receivedAmount')?.value || '',
           entries: entries
         };
         localStorage.setItem(keyFor(), JSON.stringify(payload));
@@ -1858,9 +1969,15 @@
         const saved = JSON.parse(localStorage.getItem(keyFor()) || 'null');
         entries = Array.isArray(saved?.entries) ? saved.entries : [];
         $('friend').value = saved?.friend || '';
+        if ($('receivedAmount')) {
+          $('receivedAmount').value = saved?.received || '';
+        }
       } catch (e) {
         entries = [];
         $('friend').value = '';
+        if ($('receivedAmount')) {
+          $('receivedAmount').value = '';
+        }
       }
       if (!entries.length) {
         entries = [newEntry()];
@@ -1983,13 +2100,43 @@
       save();
     });
 
-    // Handle row date picker click and row remove
+    // Handle row date picker click, row remove, and row re-ordering (Move Up / Down)
     entriesEl.addEventListener('click', e => {
       const dateTrigger = e.target.closest('[data-date-trigger]');
       if (dateTrigger) {
         const i = Number(dateTrigger.dataset.dateTrigger);
         if (!isNaN(i) && entries[i]) {
           openDatePicker(i);
+        }
+        return;
+      }
+
+      // Re-order Move Up
+      const moveUpBtn = e.target.closest('[data-move-up]');
+      if (moveUpBtn) {
+        const i = Number(moveUpBtn.dataset.moveUp);
+        if (!isNaN(i) && i > 0 && i < entries.length) {
+          const temp = entries[i];
+          entries[i] = entries[i - 1];
+          entries[i - 1] = temp;
+          render();
+          save();
+          showStatus(`Moved expense #${i + 1} up`);
+        }
+        return;
+      }
+
+      // Re-order Move Down
+      const moveDownBtn = e.target.closest('[data-move-down]');
+      if (moveDownBtn) {
+        const i = Number(moveDownBtn.dataset.moveDown);
+        if (!isNaN(i) && i >= 0 && i < entries.length - 1) {
+          const temp = entries[i];
+          entries[i] = entries[i + 1];
+          entries[i + 1] = temp;
+          render();
+          save();
+          showStatus(`Moved expense #${i + 1} down`);
         }
         return;
       }
@@ -2043,6 +2190,19 @@
       save();
     });
 
+    // Payment Received input
+    if ($('receivedAmount')) {
+      $('receivedAmount').addEventListener('input', () => {
+        const val = parseFloat($('receivedAmount').value);
+        if (!isNaN(val) && val < 0) {
+          $('receivedAmount').value = '0';
+        }
+        updateTotal();
+        updatePreview();
+        save();
+      });
+    }
+
     // Month change
     $('month').addEventListener('change', () => {
       load();
@@ -2078,6 +2238,9 @@
     $('confirmClearBtn').addEventListener('click', () => {
       const monthLabel = $('headerMonthText').textContent || 'this month';
       entries = [newEntry()];
+      if ($('receivedAmount')) {
+        $('receivedAmount').value = '';
+      }
       render();
       save();
       closeClearModal();
