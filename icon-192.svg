@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#bgGrad)"/>
+  <rect x="36" y="28" width="120" height="136" rx="16" fill="#ffffff" filter="drop-shadow(0 6px 12px rgba(0,0,0,0.15))"/>
+  <text x="96" y="94" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="64" fill="#1e40af" text-anchor="middle" dominant-baseline="central">₹</text>
+  <rect x="56" y="122" width="80" height="8" rx="4" fill="#15803d"/>
+  <rect x="56" y="136" width="50" height="6" rx="3" fill="#cbd5e1"/>
+</svg>
